@@ -1,0 +1,26 @@
+
+
+
+
+```{r}
+library(dplyr)
+Sum_f1 <- summarise_each(diabetes2,funs(median, mad))
+
+n <-  2*ncol(diabetes2)
+
+dl <- reshape(diabetes2, idvar='id', direction='long', sep="_", 
+                      varying=split(seq(n), as.numeric(gl(n,n/2,n))))
+
+
+up_data <- mapply(uper.interval, dl[,2], dl[,3])
+low_data <- mapply(lower.interval, dl[,2], dl[,3])
+data_f1 <- data_f
+data_f1[] <- Map(functionData, data_f, up_data, low_data)
+
+
+
+?reshape
+
+
+```
+

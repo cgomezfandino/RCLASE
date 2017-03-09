@@ -1,0 +1,456 @@
+
+## Proyecto Final Data Science R - Carlos Eduardo Gomez Fandiño
+
+
+Instalar cada biblioteca y habilitarla para el proyecto
+
+```{r}
+#install.packages("ggplot2", dependencies = TRUE)
+#install.packages("gridExtra")
+#install.packages("dplyr")
+#install.packages("corrplot")
+```
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(corrplot)
+```
+
+
+1. Leer el fichero titanic.csv como un dataframe.
+
+```{r}
+titanic <- as.data.frame(read.table('titanic.csv', header= T, sep =','))
+
+head(titanic)
+```
+
+
+2. Calcular el porcentaje de pasajeros que sobrevivio.
+
+```{r}
+survipercent <- prop.table(table(titanic$Survived))
+
+cat("Porcentaje Sobrevivientes:", survipercent[2]*100,'%') 
+```
+
+
+3. Calcular el porcentaje de missing values en cada uno de los atributos. Pista: averiguar que devuelve la funcion is.na cuando se aplica a un dataframe.
+
+```{r}
+apply(titanic, 2, function(x) sum(is.na(x)))/length(titanic) # porcentaje de missing values
+```
+
+
+4. Eliminar la variable cabin del dataframe.
+
+```{r}
+titanic$Cabin <- NULL
+head(titanic)
+```
+
+
+5. Completar los missing values del atributo age con la mediana del resto de datos.
+
+```{r}
+titanic$Age[which(is.na(titanic$Age))] <- mean(titanic$Age, na.rm = T)
+
+```
+
+
+6. Calcular la probabilidad de supervivencia en base al genero. ¿Que conclusion(es) obtienes del resultado? Pista: dado que la variable survived toma el valor 1 cuando el pasajero sobrevivio, es sencillo calcular la probabilidad de supervivencia con una funcion estadistica.
+
+```{r}
+Sex <- summary(titanic$Sex)
+
+probSurviSex <- prop.table(table(titanic$Sex, titanic$Survived),1) # Probabilidades sobrevive/Nosobrevive por sexos en una tabla resumida
+
+probSurviSex[,2]*100 # probabilidad de supervivencia por Genero
+```
+
+
+6.2. Otra Forma de calcularlo
+
+```{r}
+Sex <- as.factor(titanic$Sex)
+Survived <- as.factor(titanic$Survived)
+sobrevive <- sum(titanic$Survived==1) # Numero sobrevivientes: 342
+noSobrevive <- sum(titanic$Survived==0) #Numero de No sobrevivientes: 549
+hombres <- sum(titanic$Sex=='male') # total hombres abordo: 577
+mujeres <- sum(titanic$Sex=='female') # total mujeres abordo: 314
+
+viveHombre <- sum(titanic$Survived==1 & titanic$Sex=='male') #total hombres sobrevivientes: 109
+viveMujer <- sum(titanic$Survived==1 & titanic$Sex=='female') # total mujeres sobrevivientes: 233
+
+probMaleVive <- viveHombre/hombres # Probabilidad sobrevive hombre: 18.89%
+probFemaleVive <- viveMujer/mujeres # Probabilidad sobrevive mujer: 74.20%
+
+```
+
+Plot:
+
+```{r}
+plot(Sex, Survived, xlab='Sex',ylab='Survived') #Ploting Sex vs. Survived
+```
+
+
+7. Calcular la probabilidad de supervivencia en base a la edad. ¿Te parecen facilmente interpretables estos resultados
+
+```{r}
+summary(titanic$Age)
+```
+
+```{r}
+tabla.edad <- prop.table(table(titanic$Age<30,titanic$Survived),1)
+
+probSurviLess30 <- tabla.edad[2,2]
+probSurviOver30 <- tabla.edad[1,2]
+
+cat('Probabilidad sobrevivir menor a 30 años es: ',probSurviLess30*100,'%','\n','Probabilidad sobrevivir mayor o igual a 30 años es:', probSurviOver30*100, '%')
+```
+
+8. Crea una nueva variable decade en el dataframe que contenga la decada de la edad de los pasajeros y repite el analisis del apartado g) sobre esta nueva variable.¿Que conclusion(es) obtienes del resultado?
+
+```{r}
+summary(titanic$Age)
+```
+
+```{r}
+titanic$decade <- if_else(titanic$Age<10,0, if_else(titanic$Age<20,1, if_else(titanic$Age<30,2, if_else(titanic$Age<40,3, if_else(titanic$Age<50,4, if_else(titanic$Age<60,5, if_else(titanic$Age<70,6,if_else(titanic$Age<80,7,if_else(titanic$Age<90,8,9)))))))))
+
+#titanic[,c('Age','decade')] #comprobacion
+
+decade <- as.factor(titanic$decade)
+
+probSurviDecade <- prop.table(table(decade,Survived),1)
+
+probSurviDecade[,2] # Probabilidad de Supervivienvia por Decade
+```
+
+agrupacion de sobrevivientes por cada grupo de decada
+
+```{r}
+plot(decade, Survived, xlab='Decade',ylab='Survived') #Ploting decade vs, survived
+```
+
+Respuesta: para este caso tenemos la probabilidad de sobrevivir, por decadas de edad, lo cual nos permite distinguir entre grupos de edades. en este caso tenemos que hay mayor probabilidad de superviviencia para personas con menor a 10 años y para personas entre 70 y 80 años, (sin embargo la poblacion no es significativa)
+
+
+9. Calcula la probabilidad de supervivencia en base a la clase del billete del pasajero (pclass). ¿Que conclusion(es) obtienes del resultado?
+
+```{r}
+
+summary(titanic$Pclass)
+```
+
+```{r}
+Pclass <- as.factor(titanic$Pclass)
+
+probSurviClass <- prop.table(table(titanic$Pclass,titanic$Survived),1)
+
+probSurviClass1 <- probSurviClass[1,2] # Probabilidad superviviencia clase 1: 62.96%
+probSurviClass2 <- probSurviClass[2,2] # Probabilidad superviviencia clase 2: 47.28%
+probSurviClass3 <- probSurviClass[3,2] # Probabilidad superviviencia clase 3: 24.23%
+
+
+cat(' Probabilidad sobrevivir clase1: ', probSurviClass1*100,'%', '\n', 'Probabilidad sobrevivir clase2: ', probSurviClass2*100,'%', '\n', 'Probabilidad sobrevivir clase3: ', probSurviClass3*100,'%')
+```
+
+Plot:
+
+```{r}
+plot(Pclass,Survived, xlab='Pclass',ylab='Survived') # Ploting la clase vs. la superviviencia
+
+```
+
+
+
+Respuesta: La probabilidad de superviviencia de la clase 1: 62.96%, Clase 2: 47.28%, Clase 3: 24.23%
+
+
+10. Combina en una tabla el analisis de la probabilidad de supervivencia en base al sexo y clase del billete del pasajero. ¿Que conclusiones se obtienen?
+
+```{r}
+
+tapply(titanic$Survived, INDEX = list(titanic$Sex, titanic$Pclass), mean)
+
+```
+
+Respuesta: sacamos la conclucion que las mujeres de clase1 tuvieron mayor probabilidad de supervivencia., mientras que los hombres de clase 1 y 3 tuvueron la misma probabilidad de sobrevivir.
+
+
+11. Crea dos nuevas variables en el dataframe con la siguiente informacion:
+- familysize: numero total de parientes incluyendo al propio pasajero.
+- sigleton: valor logico indicando con valor TRUE si el pasajero viaja solo y FALSE en caso contrario.
+
+
+```{r}
+titanic$familysize <- titanic$Parch + titanic$SibSp +1
+titanic$sigleron <- if_else(titanic$familysize==1, 1 , 0)
+```
+
+12. Calcula la probabilidad de supervivencia en base a si el pasajero viajaba solo o no. ¿Que conclusion se puede obtener?
+
+```{r}
+sigleron <- as.factor(titanic$sigleron)
+
+probSurviSigleron <-prop.table(table(sigleron, Survived))
+
+probSurviSigleron[,2]*100 # Probabilidad de Supervivencia segun si viajaba solo o no
+
+```
+
+```{r}
+
+plot(sigleron, Survived, xlab='Sigleron',ylab='Survived') #Ploting prob supervivienvia 'sigleron'
+```
+
+Respuesta: la probabilidad de que sobreviva y este solo: 20.08% y viajar con acompañado: 18.29%
+
+
+13. Cuenta el numero de pasajeros por tamaño de familia y clase. Por ejemplo, cuantos pasajeros de primera clase pertenecen a una familia de tamaño 4. El resultado debe ser una matriz con la informacion para todas las posibles combinaciones de clase del billete y tamaño de familia.
+
+
+```{r}
+familysize <- as.factor(titanic$familysize)
+
+table(familysize,Pclass) # matriz tamaño de familia vs clase
+```
+
+
+14. Leer el fichero titanic2.csv, que contiene informacion adicional sobre los pasajeros del barco:
+- boat: identicador del bote salvavidas
+- body: identicador del cuerpo
+- home.dest: Origen/destino
+
+```{r}
+titanic2 <- as.data.frame(read.csv2('titanic2.csv',header = T))
+```
+
+
+15. Para unicar estos dos datraframes, parecera buena opcion utilizar la variable name como clave. Determina si esta variable es unica por pasajero utilizando la funcion duplicated o unique y mostrando el numero de nombres diferentes repetidos. En caso de existir varios pasajeros con el mismo nombre, listar aquellas las del dataframe inicial en las que el nombre del pasajero este repetido (la funcion %in% puede resultar util para ello). De acuerdo a los resultados, ¿sera la combinacion del nombre del pasajero y la clase una buena clave para combinar los dataframes? Combina ambos dataframes utilizando la combinacion del nombre y el numero de billete respetando el orden de los dataframes de partida. Pista: funcion merge.
+
+```{r}
+titanic3 <- merge(x = titanic, y = titanic2, by.x =c('Name','Ticket'),by.y =c('name','ticket'), all.x = TRUE)
+
+head(titanic3)
+```
+
+16. ¿Qué porcentaje de los pasajeros que sobrevivió tiene asociado un identificador del bote salvavidas?
+
+```{r}
+table.prop.surv <- prop.table(table(titanic3$boat != '', titanic3$Survived),2)
+cat('La probabilidad de supervivincia de un pasajero que tenia asociado un identificador de bote salvadidas es de: ', table.prop.surv[2,2]*100, '%')
+```
+
+
+
+### Parte 2 Con el conjunto de datos diabetes.data:
+
+
+1. Cargar los datos en un dataframe de R y eliminar los missing values,que estan codicados como -9999.00.
+
+```{r}
+diabetes <- as.data.frame(read.table('diabetes.data', header = T))
+head(diabetes)
+
+diabetes <- diabetes[diabetes$BMI>0 & diabetes$BP>0 & diabetes$S2>0 & diabetes$S5>0 ,]
+```
+
+
+2. Ver el tipo de cada una de las variables.
+
+
+```{r}
+str(diabetes) #tipo de variable de cada columna
+```
+
+3. Realizar un analisis estadistico de las variables numericas: calcular la media, varianza, rangos, etc. ¿Tienen las distintas variables rangos muy diferentes?.
+
+
+```{r}
+diabetes2 <- diabetes[,-c(diabetes$SEX)]
+summadiabetes <- sapply(diabetes2,summary) #calulos media, mediana, max, min, 1Quartil, 3Quartil
+sapply(diabetes2,var) #calculo de las varianzas
+```
+
+R/: Todas la variables presentan rangos muy difertentes.
+
+4. Hacer un grafico de cajas (boxplot) donde se pueda ver la informacion anterior de forma grafica.
+
+
+```{r}
+ggplot(stack(diabetes2),aes(x=ind,y=values))+geom_boxplot(aes(fill=ind),outlier.colour = 'Red')
+
+```
+
+
+
+5. Calcular la media para las filas que tienen SEX=M y la media para las filas que tienen SEX=F, utilizando la funcion tapply.
+
+```{r}
+sex <- as.factor(diabetes$SEX)
+
+BMImean <- tapply(diabetes$BMI, diabetes$SEX, mean)
+BPmean <- tapply(diabetes$BP, diabetes$SEX, mean)
+S1mean <- tapply(diabetes$S1, diabetes$SEX, mean)
+S2mean <- tapply(diabetes$S2, diabetes$SEX, mean)
+S3mean <- tapply(diabetes$S3, diabetes$SEX, mean)
+S4mean <- tapply(diabetes$S4, diabetes$SEX, mean)
+S5mean <- tapply(diabetes$S5, diabetes$SEX, mean)
+S6mean <- tapply(diabetes$S6, diabetes$SEX, mean)
+Ymean <- tapply(diabetes$Y, diabetes$SEX, mean)
+```
+
+
+Resumiento lo anterior en una linea de codigo
+
+```{r}
+tableMean <- aggregate(diabetes[,-c(diabetes$SEX)],by=list(diabetes$SEX), mean)
+tableMean
+```
+
+6. Calcular la correlacion de todas las variables numericas con la variable Y
+
+```{r}
+corrTable <- cor(diabetes2)
+corrTable[,9] #Tabla correlacion de cada variable respecto a Y
+```
+
+Otra forma de tener la correlacion
+
+```{r}
+apply(diabetes2,2, function(col) cor(col, diabetes2$Y))
+```
+
+7. Realizar un grafico de dispersion para las variables que tienen mas y menos correlacion con Y y comentar los resultados. ¿Como seria el grafico de dispersion entre dos vectores con correlacion 1?.
+
+```{r}
+BMIY <- ggplot(diabetes2, aes(BMI,Y)) + geom_point() +geom_smooth(method = 'lm', se = F)
+BPY <- ggplot(diabetes2,aes(BP,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S1Y <- ggplot(diabetes2,aes(S1,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S2Y <- ggplot(diabetes2,aes(S2,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S3Y <- ggplot(diabetes2,aes(S3,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S4Y <- ggplot(diabetes2,aes(S4,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S5Y <- ggplot(diabetes2,aes(S5,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+S6Y <- ggplot(diabetes2,aes(S6,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+YY <- ggplot(diabetes2,aes(Y,Y)) + geom_point()+geom_smooth(method = 'lm', se = F)
+
+```
+
+se debera intalar la biblioteca gridExtra
+
+```{r}
+grid.arrange(BMIY, BPY, S1Y, S2Y, S3Y, S4Y, S5Y, S6Y, YY,ncol=3) #multiples plot de dispercion.
+diacorr <- cor(diabetes2[,c(1:8)])
+```
+
+Gráfico correlación:
+
+```{r}
+corrplot(diacorr,method = 'number')
+```
+
+Transformar la variable SEX, que es un factor, en una variable numerica utilizando, por ejemplo, la codicacion M=1 y F=2.
+
+```{r}
+diabetes$Sex2<- as.numeric(factor(diabetes$SEX,levels = c('M','F')))
+head(diabetes)
+```
+
+9. Definimos los outliers como los elementos (filas) de los datos para los que cualquiera de las variables (numericas) esta por encima o por debajo de la mediana mas/menos 3 veces el MAD (Median Absolute Deviation). Identificar estos outliers y quitarlos.
+
+```{r}
+diabetes.summary <- apply(diabetes2,2,summary)
+
+diabetes.median <- as.data.frame(t(diabetes.summary[3,]))
+
+diabetes.mad <- as.data.frame(t(apply(diabetes2,2,mad)))
+
+encima <- diabetes.median + diabetes.mad*3
+debajo <- diabetes.median - diabetes.mad*3
+```
+
+
+```{r}
+BMI.1 <- data.frame(BMI = diabetes2$BMI[diabetes2$BMI > debajo$BMI & diabetes2$BMI < encima$BMI])
+BP.1 <- data.frame(BP = diabetes2$BP[diabetes2$BP > debajo$BP & diabetes2$BP < encima$BP])
+S1.1 <- data.frame(S1 = diabetes2$S1[diabetes2$S1 > debajo$S1 & diabetes2$S1 < encima$S1])
+S2.1 <- data.frame(S2 = diabetes2$S2[diabetes2$S2 > debajo$S2 & diabetes2$S2 < encima$S2])
+S3.1 <- data.frame(S3 = diabetes2$S3[diabetes2$S3 > debajo$S3 & diabetes2$S3 < encima$S3])
+S4.1 <- data.frame(S4 = diabetes2$S4[diabetes2$S4 > debajo$S4 & diabetes2$S4 < encima$S4])
+S5.1 <- data.frame(S5 = diabetes2$S5[diabetes2$S5 > debajo$S5 & diabetes2$S5 < encima$S5])
+S6.1 <- data.frame(S6 = diabetes2$S6[diabetes2$S6 > debajo$S6 & diabetes2$S6 < encima$S6])
+Y.1 <- data.frame(Y = diabetes2$Y[diabetes2$Y > debajo$Y & diabetes2$Y < encima$Y])
+
+boxplot(BMI.1, main='BMI sin outliers')
+boxplot(BP.1, main='BP sin outliers')
+boxplot(S1.1, main='S1 sin outliers')
+boxplot(S2.1, main='S2 sin outliers')
+boxplot(S3.1, main='S3 sin outliers')
+boxplot(S4.1, main='S4 sin outliers')
+boxplot(S5.1, main='S5 sin outliers')
+boxplot(S6.1, main='S6 sin outliers')
+boxplot(Y.1, main='Y sin outliers')
+```
+
+
+- Respuesta: Al poner un parametro de corte de la madiana + 3 veces el mad, para cada variable, podriamos quitar algunos (no todos) los outliers del cada variabñe, es decir: persiten los outliers en algunas variables como se pede ver en los Bloxplots.
+
+
+10. Separar el conjunto de datos en dos subconjuntos disjuntos de forma aleatoria, el primero conteniendo un 70% de los datos y el segundo un 30%.
+
+```{r}
+primer.contenido <- sample_frac(diabetes2, 0.7)
+segundo.contenido <- setdiff(diabetes2, primer.contenido)
+```
+
+
+11. Escalar los datos para que tengan media 0 y varianza 1, es decir, restar a cada variable numerica su media y dividir por la desviacion típica.
+
+```{r}
+diabetes.escalado <- apply(diabetes2, 2, function(x) (x-mean(x))/sd(x))
+head(diabetes.escalado)
+
+```
+
+Media diabetes escalado:
+
+```{r}
+round(apply(diabetes.escalado,2,mean),0) # comprobacion media = 0, dataset diabetes2
+```
+
+desviacion diabetes escalado:
+
+```{r}
+apply(diabetes.escalado,2,sd) # comprobacion desviacion = 1, del dataset diabetes2
+```
+
+
+Calcular la media y desviacion en el conjunto de train, y utilizar esa misma media y desviacion para escalar el conjunto de test.
+
+```{r}
+p.c.mean <- apply(primer.contenido,2,mean)
+p.c.sd <- apply(primer.contenido,2,sd)
+
+segundo.contenido.escalado <- (segundo.contenido - matrix(p.c.mean, nrow(segundo.contenido), ncol(segundo.contenido),byrow = T))/matrix(p.c.sd, nrow(segundo.contenido), ncol(segundo.contenido),byrow = T)
+
+s.c.escalado.media <- apply(segundo.contenido.escalado,2,mean)
+s.c.escalado.sd <- apply(segundo.contenido.escalado,2,sd)
+```
+
+media segundo contenido (test) escalado
+
+```{r}
+s.c.escalado.media
+```
+
+desviacion segundo contenido test escalado
+
+```{r}
+s.c.escalado.sd
+```
+
+
